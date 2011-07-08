@@ -1,0 +1,25 @@
+diff -ru hunspell-1.2.8.orig/src/hunspell/suggestmgr.cxx hunspell-1.2.8/src/hunspell/suggestmgr.cxx
+--- hunspell-1.2.8.orig/src/hunspell/suggestmgr.cxx	2010-01-18 09:25:59.000000000 +0000
++++ hunspell-1.2.8/src/hunspell/suggestmgr.cxx	2010-01-18 09:34:58.000000000 +0000
+@@ -1742,11 +1742,10 @@
+       if (ns < 2) break;
+     }
+   } else {  
+-    char t[MAXSWUTF8L];
+-    l1 = strlen(s1);
+     l2 = strlen(s2);
+     if (l2 == 0) return 0;
+-    strcpy(t, s2);
++    l1 = strlen(s1);
++    char *t = mystrdup(s2);
+     if (opt & NGRAM_LOWERING) mkallsmall(t, csconv);
+     for (int j = 1; j <= n; j++) {
+       ns = 0;
+@@ -1759,6 +1758,7 @@
+       nscore = nscore + ns;
+       if (ns < 2) break;
+     }
++    free(t);
+   }
+   
+   ns = 0;

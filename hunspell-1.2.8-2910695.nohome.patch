@@ -1,0 +1,28 @@
+diff -ru hunspell-1.2.8.orig/src/tools/hunspell.cxx hunspell-1.2.8/src/tools/hunspell.cxx
+--- hunspell-1.2.8.orig/src/tools/hunspell.cxx	2009-12-08 13:54:20.000000000 +0000
++++ hunspell-1.2.8/src/tools/hunspell.cxx	2009-12-08 14:00:09.000000000 +0000
+@@ -1016,7 +1016,6 @@
+ 		i->next = dicwords;
+ 		dicwords = i;
+ 		// save
+-		strcpy(buf,HOME);
+ 		if (HOME) strcpy(buf,HOME); else {
+ 		    fprintf(stderr, gettext("error - missing HOME variable\n"));
+ 		    break;
+@@ -1147,7 +1146,6 @@
+ 		    }
+ 		    // save
+ 		    		    
+-		    strcpy(buf,HOME);
+ 		    if (HOME) strcpy(buf,HOME); else {
+ 			fprintf(stderr, gettext("error - missing HOME variable\n"));
+ 			continue;
+@@ -1541,7 +1539,7 @@
+ 	path = add(path, PATHSEP);          // <- check path in root directory
+ 	if (getenv("DICPATH")) path = add(add(path, getenv("DICPATH")), PATHSEP);
+ 	path = add(add(path, LIBDIR), PATHSEP);
+-	path = add(add(add(add(path, HOME), DIRSEP), USEROOODIR), PATHSEP);
++	if (HOME) path = add(add(add(add(path, HOME), DIRSEP), USEROOODIR), PATHSEP);
+ 	path = add(path, OOODIR);
+ 
+ 	if (showpath) {

@@ -1,0 +1,117 @@
+diff -ru hunspell-1.2.8.orig/man/hunspell.1 hunspell-1.2.8/man/hunspell.1
+--- hunspell-1.2.8.orig/man/hunspell.1	2008-06-12 09:50:43.000000000 +0100
++++ hunspell-1.2.8/man/hunspell.1	2009-05-01 09:05:15.000000000 +0100
+@@ -309,9 +309,10 @@
+ 
+ .IP \fB\-p\ dict\fR
+ Set path of personal dictionary.
+-Default dictionary depends from the locale settings.
+-Without locale support, the default personal dictionary is
+-the $HOME/.hunspell_default.
++The default dictionary depends on the locale settings. The
++following environment variables are searched: LC_ALL,
++LC_MESSAGES, and LANG. If none are set then the default personal
++dictionary is $HOME/.hunspell_default.
+ 
+ Setting
+ .I \-d
+@@ -360,6 +361,11 @@
+ Equivalent to 
+ .I \-p.
+ .SH FILES
++The default dictionary depends on the locale settings. The
++following environment variables are searched: LC_ALL,
++LC_MESSAGES, and LANG. If none are set then the following
++fallbacks are used:
++
+ .BI /usr/share/myspell/default.aff
+ Path of default affix file. See hunspell(4).
+ .PP
+diff -ru hunspell-1.2.8.orig/src/tools/hunspell.cxx hunspell-1.2.8/src/tools/hunspell.cxx
+--- hunspell-1.2.8.orig/src/tools/hunspell.cxx	2008-09-04 14:44:19.000000000 +0100
++++ hunspell-1.2.8/src/tools/hunspell.cxx	2009-05-01 09:15:33.000000000 +0100
+@@ -168,7 +168,6 @@
+ int printgood = 0; // print only good words and lines
+ int showpath = 0;  // show detected path of the dictionary
+ int checkurl = 0;  // check URLs and mail addresses
+-char * ui_lang = NULL; // locale for default dic_name
+ const char * ui_enc = NULL;  // locale character encoding (default for I/O)
+ const char * io_enc = NULL;  // I/O character encoding
+ 
+@@ -1383,7 +1382,7 @@
+ 	
+ #ifdef ENABLE_NLS
+ #ifdef HAVE_LOCALE_H
+-	ui_lang = setlocale(LC_ALL, "");
++	setlocale(LC_ALL, "");
+ 	textdomain("hunspell");
+         ui_enc = nl_langinfo(CODESET);
+ #endif
+@@ -1557,13 +1556,28 @@
+ 	
+ 	if (! dicname) {
+ 		if (! (dicname=getenv("DICTIONARY"))) {
+-			if ((dicname=ui_lang) || (dicname=getenv("LANG"))) {
+-			    dicname = mystrdup(dicname);
+-			    char * dot = strchr(dicname, '.');
+-			    if (dot) *dot = '\0';
+-			    char * at = strchr(dicname, '@');
+-			    if (at) *at = '\0';
+-			} else {
++			/*
++			 * Search in order of LC_ALL, LC_MESSAGES &
++			 * LANG
++			*/
++			const char *tests[] = { "LC_ALL", "LC_MESSAGES", "LANG" };
++			for (size_t i = 0; i < sizeof(tests) / sizeof(const char*); ++i) {
++				if ((dicname=getenv(tests[i])) && strcmp(dicname, "") != 0) {
++					dicname = mystrdup(dicname);
++					char * dot = strchr(dicname, '.');
++					if (dot) *dot = '\0';
++					char * at = strchr(dicname, '@');
++					if (at) *at = '\0';
++					break;
++				}
++			}
++
++			if (dicname && ((strcmp(dicname, "C") == 0) || (strcmp(dicname, "POSIX") == 0))) {
++			    free(dicname);
++			    dicname=mystrdup("en_US");
++			}
++
++			if (! dicname) {
+ 		            dicname=mystrdup(DEFAULTDICNAME);
+ 			}
+ 		} else {
+@@ -1577,6 +1589,12 @@
+ 	path = add(add(add(add(path, HOME), DIRSEP), USEROOODIR), PATHSEP);
+ 	path = add(path, OOODIR);
+ 
++	if (showpath) {
++		fprintf(stderr, gettext("SEARCH PATH:\n%s\n"), path);
++		fprintf(stderr, gettext("AVAILABLE DICTIONARIES (path is not mandatory for -d option):\n"));
++		search(path, NULL, NULL);
++	}
++
+ 	if (!privdicname) privdicname = mystrdup(getenv("WORDLIST"));
+ 
+         int diclen = strlen(dicname);
+@@ -1586,9 +1604,6 @@
+ 	char * dic = search(path, dicname, ".dic");
+ 	if (aff && dic) {
+ 		if (showpath) {
+-			fprintf(stderr, gettext("SEARCH PATH:\n%s\n"), path);
+-			fprintf(stderr, gettext("AVAILABLE DICTIONARIES (path is not mandatory for -d option):\n"), path);
+-			search(path, NULL, NULL);
+ 			fprintf(stderr, gettext("LOADED DICTIONARY:\n%s\n%s\n"), aff, dic);
+ 		}
+ 		pMS[0] = new Hunspell(aff, dic, key);
+@@ -1611,7 +1626,7 @@
+                     } else if (dic) pMS[dmax-1]->add_dic(dic);
+ 		}
+ 	} else {
+-		fprintf(stderr,gettext("Can't open affix or dictionary files.\n"));
++		fprintf(stderr,gettext("Can't open affix or dictionary files for dictionary named \"%s\".\n"), dicname);
+ 		exit(1);
+ 	}
+ 
